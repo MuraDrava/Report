@@ -12,7 +12,7 @@ import os
 
 # Postavljanje stranice
 st.set_page_config(
-    page_title="Excel File Reader",
+    page_title="Mura Drava izvještaj",
     page_icon="📊",
     layout="wide"
 )
