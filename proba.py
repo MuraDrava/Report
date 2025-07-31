@@ -8,9 +8,7 @@ Created on Wed Jul 30 16:33:22 2025
 import streamlit as st
 import pandas as pd
 import os
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime
+
 
 # Postavljanje stranice
 st.set_page_config(
