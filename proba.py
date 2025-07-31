@@ -18,5 +18,5 @@ st.set_page_config(
 )
 
 # Naslov aplikacije
-st.title("📊 Excel File Reader")
+st.title("📊 Mura Drava izvještaj")
 st.markdown("---")
