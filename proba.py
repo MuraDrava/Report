@@ -12,7 +12,7 @@ from io import BytesIO
 import base64
 
 st.set_page_config(
-    page_title="MuraDrava-FFS Izvještaj",
+    page_title="MuraDrava-FFS",
     page_icon="🌊",
     layout="wide"
 )
@@ -91,7 +91,7 @@ def display_image_with_openseadragon(image: Image.Image):
     st.components.v1.html(html,height=450)
 
 def main():
-    st.title("🌊 MuraDrava-FFS Izvještaj")
+    st.title("🌊 MuraDrava-FFS")
 
     found_files = find_report_image()
 
