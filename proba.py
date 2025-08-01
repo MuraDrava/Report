@@ -83,7 +83,7 @@ def main():
         st.subheader(report_type)
         
         image = Image.open(selected_file)
-        display_image_as_link(image, selected_file)
+        display_image_with_js_open(image, selected_file)
         
         with open(selected_file, "rb") as file:
             file_extension = selected_file.split('.')[-1]
@@ -116,7 +116,7 @@ def main():
             st.subheader(report_type)
             
             image = Image.open(uploaded_file)
-            display_image_as_link(image, uploaded_file.name)
+            display_image_with_js_open(image, uploaded_file.name)
             
             st.download_button(
                 label="📥 Preuzmi sliku",
