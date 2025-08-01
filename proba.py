@@ -41,7 +41,7 @@ def get_report_type(filename):
     else:
         return "📋 Izvještaj"
 
-def display_image_as_link(image, filename="slika.png"):
+def display_image_with_js_open(image, filename="slika.png"):
     buffered = BytesIO()
     image.save(buffered, format="PNG")
     b64 = base64.b64encode(buffered.getvalue()).decode()
