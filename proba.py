@@ -11,7 +11,6 @@ import os
 import glob
 from io import BytesIO
 import base64
-import streamlit.components.v1 as components
 
 # Postavljanje stranice
 st.set_page_config(
@@ -21,17 +20,14 @@ st.set_page_config(
 )
 
 def find_report_image():
-    """Pronađi PNG/JPG datoteke koje sadrže 'redovni' ili 'posebni' u nazivu"""
     patterns = [
         "*redovni*.png", "*posebni*.png",
         "*redovni*.jpg", "*posebni*.jpg",
         "*redovni*.jpeg", "*posebni*.jpeg"
     ]
-    
     found_files = []
     for pattern in patterns:
         found_files.extend(glob.glob(pattern))
-    
     found_files = list(set(found_files))
     found_files.sort()
     return found_files
@@ -45,52 +41,18 @@ def get_report_type(filename):
     else:
         return "📋 Izvještaj"
 
-def display_interactive_image(image):
+def display_image_as_link(image, filename="slika.png"):
     buffered = BytesIO()
     image.save(buffered, format="PNG")
-    img_b64 = base64.b64encode(buffered.getvalue()).decode()
+    b64 = base64.b64encode(buffered.getvalue()).decode()
+    href = f"data:image/png;base64,{b64}"
 
-    html_code = f"""
-    <html>
-    <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        .panzoom-container {{
-            width: 100%;
-            max-height: 80vh;
-            overflow: hidden;
-            border: 1px solid #ccc;
-            touch-action: none;
-        }}
-        .panzoom-container img {{
-            width: 100%;
-            height: auto;
-            display: block;
-            user-select: none;
-            -webkit-user-drag: none;
-            pointer-events: none;
-        }}
-    </style>
-    </head>
-    <body>
-        <div id="panzoom" class="panzoom-container">
-            <img src="data:image/png;base64,{img_b64}" alt="zoomable image">
-        </div>
-
-        <script src="https://unpkg.com/@panzoom/panzoom@9.4.0/dist/panzoom.min.js"></script>
-        <script>
-            const elem = document.getElementById('panzoom');
-            const panzoom = Panzoom(elem, {{
-                maxScale: 5,
-                minScale: 1,
-                contain: 'outside'
-            }});
-            elem.addEventListener('wheel', panzoom.zoomWithWheel);
-        </script>
-    </body>
-    </html>
-    """
-    components.html(html_code, height=700)
+    st.markdown(f"""
+    <a href="{href}" target="_blank" rel="noopener noreferrer">
+        <img src="{href}" style="width:100%; height:auto; border:1px solid #ccc;" />
+    </a>
+    <p style="font-size: 0.9em;">📱 Klikni na sliku za prikaz u novom tabu i pinch-to-zoom</p>
+    """, unsafe_allow_html=True)
 
 def main():
     st.title("🌊 MuraDrava-FFS Izvještaj")
@@ -121,7 +83,7 @@ def main():
         st.subheader(report_type)
         
         image = Image.open(selected_file)
-        display_interactive_image(image)
+        display_image_as_link(image, selected_file)
         
         with open(selected_file, "rb") as file:
             file_extension = selected_file.split('.')[-1]
@@ -154,7 +116,7 @@ def main():
             st.subheader(report_type)
             
             image = Image.open(uploaded_file)
-            display_interactive_image(image)
+            display_image_as_link(image, uploaded_file.name)
             
             st.download_button(
                 label="📥 Preuzmi sliku",
