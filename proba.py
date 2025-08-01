@@ -163,8 +163,7 @@ def main():
 
 # Sidebar - kontakt
 st.sidebar.markdown("---")
-st.sidebar.markdown("📧 MuraDrava-FFS")
-st.sidebar.markdown("🌊 Sustav za praćenje vodostaja")
+st.sidebar.markdown("🌊 MuraDrava-FFS")
 
 if __name__ == "__main__":
     main()
