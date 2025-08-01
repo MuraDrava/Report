@@ -62,20 +62,14 @@ def display_mobile_friendly_image(image):
             max-width: 100%;
             height: auto;
             border: 1px solid #ccc;
-        }}
-        @media (hover: none) and (pointer: coarse) {{
-            img {{
-                touch-action: pinch-zoom;
-            }}
+            touch-action: pinch-zoom;
         }}
     </style>
     </head>
     <body>
         <div class="img-wrapper">
-            <a href="data:image/png;base64,{img_b64}" target="_blank">
-                <img src="data:image/png;base64,{img_b64}" alt="report image" />
-            </a>
-            <p style="font-size:0.9em; color:#888;">📱 Dodirni sliku za fullscreen i pinch-to-zoom</p>
+            <img src="data:image/png;base64,{img_b64}" alt="report image" />
+            <p style="font-size:0.9em; color:#888;">📱 Zumiranje omogućeno (ovisno o uređaju)</p>
         </div>
     </body>
     </html>
@@ -156,8 +150,7 @@ def main():
 
 # Sidebar - kontakt
 st.sidebar.markdown("---")
-st.sidebar.markdown("📧 MuraDrava-FFS")
-st.sidebar.markdown("🌊 Sustav za praćenje vodostaja")
+st.sidebar.markdown("🌊 MuraDrava-FFS")
 
 if __name__ == "__main__":
     main()
