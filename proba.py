@@ -50,15 +50,24 @@ def display_image_with_openseadragon(image: Image.Image):
       <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/3.1.0/openseadragon.min.js"></script>
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/3.1.0/openseadragon.min.css" />
       <style>
+        #openseadragon-wrapper {{
+          width: 100%;
+          height: 400px;
+          overflow: auto;
+          border: 1px solid #ccc;
+          margin-bottom: 20px;
+        }}
         #openseadragon {{
           width: 100%;
-          height: 600px;
+          height: 400px;
           background-color: #000;
         }}
       </style>
     </head>
     <body>
-      <div id="openseadragon"></div>
+      <div id="openseadragon-wrapper">
+        <div id="openseadragon"></div>
+      </div>
       <script>
         var viewer = OpenSeadragon({{
           id: "openseadragon",
@@ -79,7 +88,7 @@ def display_image_with_openseadragon(image: Image.Image):
     </body>
     </html>
     """
-    st.components.v1.html(html, height=650)
+    st.components.v1.html(html, height=450)
 
 def main():
     st.title("🌊 MuraDrava-FFS Izvještaj")
