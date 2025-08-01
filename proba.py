@@ -88,7 +88,7 @@ def display_image_with_openseadragon(image: Image.Image):
     </body>
     </html>
     """
-    st.components.v1.html(html, height=450)
+    st.components.v1.html(html,height=450)
 
 def main():
     st.title("🌊 MuraDrava-FFS Izvještaj")
