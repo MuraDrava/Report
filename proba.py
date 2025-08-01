@@ -45,7 +45,7 @@ def get_report_type(filename):
     else:
         return "📋 Izvještaj"
 
-def display_mobile_friendly_image(image):
+def display_interactive_image(image):
     buffered = BytesIO()
     image.save(buffered, format="PNG")
     img_b64 = base64.b64encode(buffered.getvalue()).decode()
@@ -53,28 +53,43 @@ def display_mobile_friendly_image(image):
     html_code = f"""
     <html>
     <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        .img-wrapper {{
-            text-align: center;
-            margin-bottom: 10px;
-        }}
-        img {{
-            max-width: 100%;
-            height: auto;
+        .panzoom-container {{
+            width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
             border: 1px solid #ccc;
-            touch-action: pinch-zoom;
+            touch-action: none;
+        }}
+        .panzoom-container img {{
+            width: 100%;
+            height: auto;
+            display: block;
+            user-select: none;
+            -webkit-user-drag: none;
+            pointer-events: none;
         }}
     </style>
     </head>
     <body>
-        <div class="img-wrapper">
-            <img src="data:image/png;base64,{img_b64}" alt="report image" />
-            <p style="font-size:0.9em; color:#888;">📱 Zumiranje omogućeno (ovisno o uređaju)</p>
+        <div id="panzoom" class="panzoom-container">
+            <img src="data:image/png;base64,{img_b64}" alt="zoomable image">
         </div>
+
+        <script src="https://unpkg.com/@panzoom/panzoom@9.4.0/dist/panzoom.min.js"></script>
+        <script>
+            const elem = document.getElementById('panzoom');
+            const panzoom = Panzoom(elem, {{
+                maxScale: 5,
+                minScale: 1,
+                contain: 'outside'
+            }});
+            elem.addEventListener('wheel', panzoom.zoomWithWheel);
+        </script>
     </body>
     </html>
     """
-
     components.html(html_code, height=700)
 
 def main():
@@ -106,7 +121,7 @@ def main():
         st.subheader(report_type)
         
         image = Image.open(selected_file)
-        display_mobile_friendly_image(image)
+        display_interactive_image(image)
         
         with open(selected_file, "rb") as file:
             file_extension = selected_file.split('.')[-1]
@@ -139,7 +154,7 @@ def main():
             st.subheader(report_type)
             
             image = Image.open(uploaded_file)
-            display_mobile_friendly_image(image)
+            display_interactive_image(image)
             
             st.download_button(
                 label="📥 Preuzmi sliku",
@@ -150,7 +165,8 @@ def main():
 
 # Sidebar - kontakt
 st.sidebar.markdown("---")
-st.sidebar.markdown("🌊 MuraDrava-FFS")
+st.sidebar.markdown("📧 MuraDrava-FFS")
+st.sidebar.markdown("🌊 Sustav za praćenje vodostaja")
 
 if __name__ == "__main__":
     main()
