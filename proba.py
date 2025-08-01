@@ -51,10 +51,10 @@ def display_image_with_openseadragon(image: Image.Image):
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/3.1.0/openseadragon.min.css" />
       <style>
         #openseadragon-wrapper {{
-          width: 100%;
+          width: 70%;
           height: 400px;
           overflow: auto;
-          border: 1px solid #ccc;
+          border: 1px solid #ddd;
           margin-bottom: 20px;
         }}
         #openseadragon {{
