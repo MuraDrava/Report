@@ -60,7 +60,7 @@ def display_image_with_openseadragon(image: Image.Image):
         #openseadragon {{
           width: 100%;
           height: 400px;
-          background-color: #000;
+          background-color: #ddd;
         }}
       </style>
     </head>
