@@ -70,80 +70,51 @@ def main():
     # Pronađi sve relevantne datoteke
     found_files = find_report_image()
     
-    if found_files:
-        # Ako je pronađena samo jedna datoteka
-        if len(found_files) == 1:
-            image_path = found_files[0]
-            report_type = get_report_type(image_path)
-            
-            st.subheader(report_type)
-            st.success(f"✅ Pronađena datoteka: `{image_path}`")
-            
-            # Prikaži sliku
-            image = Image.open(image_path)
-            st.image(image, use_container_width=True)
-            
-            # Download opcija
-            with open(image_path, "rb") as file:
-                file_extension = image_path.split('.')[-1]
-                download_name = f"MuraDrava_{report_type.split()[-1]}_{image_path}"
-                
-                btn = st.download_button(
-                    label="📥 Preuzmi izvještaj",
-                    data=file,
-                    file_name=download_name,
-                    mime=f"image/{file_extension}"
-                )
+    # Sidebar za odabir izvještaja
+    with st.sidebar:
+        st.markdown("### 📋 Odabir izvještaja")
         
-        # Ako je pronađeno više datoteka, daj izbor
-        else:
-            st.subheader("📁 Pronađeno više izvještaja")
-            
-            # Selectbox za odabir datoteke
-            selected_file = st.selectbox(
-                "Odaberite izvještaj:",
-                found_files,
-                format_func=lambda x: f"{get_report_type(x)} - {x}")
-            
-            if selected_file:
+        if found_files:
+            if len(found_files) == 1:
+                # Ako je samo jedna datoteka, prikaži je u sidebaru
+                selected_file = found_files[0]
                 report_type = get_report_type(selected_file)
-                st.subheader(report_type)
-                
-                # Prikaži sliku
-                image = Image.open(selected_file)
-                st.image(image, use_container_width=True)
-                
-                # Download opcija
-                with open(selected_file, "rb") as file:
-                    file_extension = selected_file.split('.')[-1]
-                    download_name = f"MuraDrava_{selected_file}"
-                    
-                    btn = st.download_button(
-                        label="📥 Preuzmi odabrani izvještaj",
-                        data=file,
-                        file_name=download_name,
-                        mime=f"image/{file_extension}"
-                    )
-        
-        # Prikaži listu svih pronađenih datoteka
-        with st.expander("📋 Sve pronađene datoteke"):
-            for file in found_files:
-                file_type = get_report_type(file)
-                file_size = os.path.getsize(file) / 1024  # KB
-                st.write(f"• **{file}** - {file_type} - {file_size:.1f} KB")
+                st.success(f"✅ {report_type}")
+                st.write(f"📁 `{selected_file}`")
+            else:
+                # Selectbox za odabir datoteke u sidebaru
+                selected_file = st.selectbox(
+                    "Odaberite izvještaj:",
+                    found_files,
+                    format_func=lambda x: f"{get_report_type(x).split()[-1]} - {x.split('/')[-1]}"
+                )
+        else:
+            selected_file = None
+            st.error("❌ Nema dostupnih izvještaja")
     
-    else:
-        st.error("❌ Nisu pronađene datoteke s nazivom 'redovni' ili 'posebni'")
-        st.info("""
-        💡 **Molimo provjerite da datoteka sadrži:**
-        - Riječ **'redovni'** ili **'posebni'** u nazivu
-        - Ekstenziju **.png**, **.jpg** ili **.jpeg**
+    # Glavni sadržaj
+    if found_files and selected_file:
+        report_type = get_report_type(selected_file)
+        st.subheader(report_type)
         
-        **Primjeri validnih naziva:**
-        - `2025-05-16_redovni_izvjestaj.png`
-        - `posebni_2025-05-16.jpg`
-        - `muradrava_redovni.png`
-        """)
+        # Prikaži sliku
+        image = Image.open(selected_file)
+        st.image(image, use_container_width=True)
+        
+        # Download opcija
+        with open(selected_file, "rb") as file:
+            file_extension = selected_file.split('.')[-1]
+            download_name = f"MuraDrava_{selected_file}"
+            
+            btn = st.download_button(
+                label="📥 Preuzmi izvještaj",
+                data=file,
+                file_name=download_name,
+                mime=f"image/{file_extension}"
+            )
+    
+    elif not found_files:
+        st.error("❌ Nisu pronađene datoteke s nazivom 'redovni' ili 'posebni'")
         
         # Prikaži sve PNG/JPG datoteke u direktoriju
         all_images = glob.glob("*.png") + glob.glob("*.jpg") + glob.glob("*.jpeg")
@@ -154,11 +125,10 @@ def main():
                 st.write(f"• {img}")
         
         # Upload opcija
-        st.subheader("📤 Ili uploadajte sliku:")
+        st.subheader("📤 Uploadajte sliku:")
         uploaded_file = st.file_uploader(
             "Odaberite PNG/JPG datoteku",
-            type=['png', 'jpg', 'jpeg'],
-            help="Podržani formati: PNG, JPG, JPEG"
+            type=['png', 'jpg', 'jpeg']
         )
         
         if uploaded_file is not None:
@@ -177,27 +147,10 @@ def main():
                 mime=f"image/{uploaded_file.name.split('.')[-1]}"
             )
 
-# Sidebar informacije
-st.sidebar.markdown("### ℹ️ Kako koristiti")
-st.sidebar.markdown("""
-**Aplikacija automatski pronalazi slike s nazivima:**
-- `*redovni*` (redovni izvještaji)
-- `*posebni*` (posebni izvještaji)
-
-**Podržani formati:** PNG, JPG, JPEG
-
-**Primjeri validnih naziva:**
-- `2025-05-16_redovni.png`
-- `posebni_izvjestaj_16-05.jpg`
-- `muradrava_redovni_prognoza.png`
-- `hitni_posebni_2025.jpeg`
-
-**Ako ima više datoteka:**
-- Možete birati koju želite prikazati
-""")
-
+# Sidebar - samo kontakt
 st.sidebar.markdown("---")
-st.sidebar.markdown("📧 Za pomoć kontaktirajte admin")
+st.sidebar.markdown("📧 MuraDrava-FFS")
+st.sidebar.markdown("🌊 Sustav za praćenje vodostaja")
 
 if __name__ == "__main__":
     main()
