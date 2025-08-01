@@ -58,7 +58,7 @@ def display_image_with_openseadragon(image: Image.Image):
           margin-bottom: 20px;
         }}
         #openseadragon {{
-          width: 100%;
+          width: 70%;
           height: 400px;
           background-color: #ddd;
         }}
