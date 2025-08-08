@@ -32,6 +32,9 @@ def read_trigger_config():
         with open(TRIGGER_FILE, 'r', encoding='utf-8') as file:
             content = file.read().strip()
             
+            # Ukloni navodnike ako postoje
+            content = content.strip('"\'')
+            
             if content.upper() == 'DAILY':
                 config['type'] = 'redovni'
                 config['source_file'] = 'redovni.jpeg'
@@ -101,20 +104,49 @@ def create_trigger_example():
 def git_commit_and_push(files: list[Path], config: dict):
     """
     Git commit i push s opisnim commit message-om
+    Automatski radi git pull prije push-a
     """
     try:
         commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
         
+        # 1. Dodaj datoteke
         for file in files:
             subprocess.run(["git", "add", str(file)], cwd=Path.cwd(), check=True)
         
+        # 2. Commit
         subprocess.run(["git", "commit", "-m", commit_message], cwd=Path.cwd(), check=True)
-        subprocess.run(["git", "push"], cwd=Path.cwd(), check=True)
+        
+        # 3. Pull najnovije promjene s remote-a
+        print("[ℹ️] Dohvaćam najnovije promjene s GitHub-a...")
+        try:
+            result = subprocess.run(["git", "pull", "origin", "main"], 
+                                  cwd=Path.cwd(), 
+                                  check=True, 
+                                  capture_output=True, 
+                                  text=True)
+            print("[✓] Git pull uspješan")
+        except subprocess.CalledProcessError as pull_error:
+            print(f"[⚠️] Git pull warning: {pull_error.stderr}")
+            print("[ℹ️] Pokušavam s automatskim merge...")
+            # Pokušaj s --no-edit flag
+            subprocess.run(["git", "pull", "--no-edit", "origin", "main"], 
+                          cwd=Path.cwd(), check=True)
+        
+        # 4. Push
+        subprocess.run(["git", "push", "origin", "main"], cwd=Path.cwd(), check=True)
         
         print(f"[✓] Git push uspješan: {commit_message}")
         
     except subprocess.CalledProcessError as e:
         print(f"[✗] Git greška: {e}")
+        if hasattr(e, 'stderr') and e.stderr:
+            print(f"[✗] Detalji: {e.stderr}")
+        
+        # Predloži ručno rješavanje
+        print("\n[💡] Ručno rješavanje:")
+        print("1. cd u tvoj git folder")
+        print("2. git pull origin main")
+        print("3. git push origin main")
 
 def main():
     print("=" * 50)
