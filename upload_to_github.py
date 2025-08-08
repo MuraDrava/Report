@@ -104,69 +104,41 @@ def create_trigger_example():
 def git_commit_and_push(files: list[Path], config: dict):
     """
     Git commit i push s opisnim commit message-om
-    Automatski radi git pull prije push-a s stash ako treba
+    Provjeri konflikte prije commit-a
     """
     try:
         commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
         
-        # 1. Dodaj datoteke
+        # 0. Resetiraj na čisto stanje
+        print("[🔧] Resetiram git na čisto stanje...")
+        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=Path.cwd(), check=True)
+        subprocess.run(["git", "clean", "-fd"], cwd=Path.cwd(), check=True)
+        print("[✓] Git reset završen")
+        
+        # 1. Pull najnovije promjene
+        print("[ℹ️] Dohvaćam najnovije promjene s GitHub-a...")
+        subprocess.run(["git", "pull", "origin", "main"], cwd=Path.cwd(), check=True)
+        print("[✓] Git pull uspješan")
+        
+        # 2. Dodaj datoteke
         for file in files:
             subprocess.run(["git", "add", str(file)], cwd=Path.cwd(), check=True)
         
-        # 2. Commit
+        # 3. Commit
         subprocess.run(["git", "commit", "-m", commit_message], cwd=Path.cwd(), check=True)
         
-        # 3. Provjeri ima li uncommitted promjena
-        result = subprocess.run(["git", "status", "--porcelain"], 
-                               cwd=Path.cwd(), 
-                               capture_output=True, 
-                               text=True, 
-                               check=True)
-        
-        has_changes = bool(result.stdout.strip())
-        stashed = False
-        
-        if has_changes:
-            print("[ℹ️] Sprema lokalne promjene (git stash)...")
-            subprocess.run(["git", "stash", "push", "-m", "Auto-stash prije uploada"], 
-                          cwd=Path.cwd(), check=True)
-            stashed = True
-            print("[✓] Lokalne promjene stash-ane")
-        
-        # 4. Pull najnovije promjene s remote-a
-        print("[ℹ️] Dohvaćam najnovije promjene s GitHub-a...")
-        subprocess.run(["git", "pull", "origin", "main"], 
-                      cwd=Path.cwd(), 
-                      check=True)
-        print("[✓] Git pull uspješan")
-        
-        # 5. Vrati stash-ane promjene ako su postojale
-        if stashed:
-            print("[ℹ️] Vraćam lokalne promjene (git stash pop)...")
-            try:
-                subprocess.run(["git", "stash", "pop"], 
-                              cwd=Path.cwd(), 
-                              check=True)
-                print("[✓] Lokalne promjene vraćene")
-            except subprocess.CalledProcessError:
-                print("[⚠️] Možda ima konflikata - provjeri ručno")
-        
-        # 6. Push
+        # 4. Push
         subprocess.run(["git", "push", "origin", "main"], cwd=Path.cwd(), check=True)
-        
         print(f"[✓] Git push uspješan: {commit_message}")
         
     except subprocess.CalledProcessError as e:
         print(f"[✗] Git greška: {e}")
-        if hasattr(e, 'stderr') and e.stderr:
-            print(f"[✗] Detalji: {e.stderr}")
         
         # Predloži ručno rješavanje
-        print("\n[💡] Ručno rješavanje:")
-        print("1. git stash")
-        print("2. git pull origin main") 
-        print("3. git push origin main")
-        print("4. git stash pop  # za vraćanje promjena")
+        print("\n[💡] Brzo rješavanje:")
+        print("git reset --hard HEAD")
+        print("git pull origin main")
+        print("git push origin main")
 
 def main():
     print("=" * 50)
