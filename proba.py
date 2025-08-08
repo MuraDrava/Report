@@ -10,6 +10,7 @@ from PIL import Image
 import glob
 from io import BytesIO
 import base64
+import os
 
 st.set_page_config(
     page_title="MuraDrava-FFS",
@@ -18,20 +19,36 @@ st.set_page_config(
 )
 
 def find_report_image():
+    # Definiraj putanju do reports foldera
+    reports_folder = "reports"
+    
+    # Provjeri postoji li reports folder, ako ne - stvori ga
+    if not os.path.exists(reports_folder):
+        os.makedirs(reports_folder)
+    
     patterns = [
         "*redovni*.png", "*posebni*.png",
         "*redovni*.jpg", "*posebni*.jpg",
         "*redovni*.jpeg", "*posebni*.jpeg"
     ]
+    
     found_files = []
+    
+    # Trazi datoteke u reports folderu
     for pattern in patterns:
-        found_files.extend(glob.glob(pattern))
+        # Kombinuj putanju s pattern-om
+        search_pattern = os.path.join(reports_folder, pattern)
+        found_files.extend(glob.glob(search_pattern))
+    
     found_files = list(set(found_files))
     found_files.sort()
     return found_files
 
 def get_report_type(filename):
-    filename_lower = filename.lower()
+    # Uzmi samo naziv datoteke bez putanje
+    filename_base = os.path.basename(filename)
+    filename_lower = filename_base.lower()
+    
     if 'redovni' in filename_lower:
         return "📊 Redovni izvještaj"
     elif 'posebni' in filename_lower:
@@ -39,7 +56,7 @@ def get_report_type(filename):
     else:
         return "📋 Izvještaj"
 
-def display_image_with_openseadragon(image: Image.Image):
+def display_image_with_openseadragon(image):
     buffered = BytesIO()
     image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
@@ -60,7 +77,7 @@ def display_image_with_openseadragon(image: Image.Image):
         #openseadragon {{
           width: 100%;
           height: 400px;
-          background-color: #ddd;
+          background-color: #000;
         }}
       </style>
     </head>
@@ -88,7 +105,7 @@ def display_image_with_openseadragon(image: Image.Image):
     </body>
     </html>
     """
-    st.components.v1.html(html,height=450)
+    st.components.v1.html(html, height=450)
 
 def main():
     st.title("🌊 MuraDrava-FFS")
@@ -103,16 +120,17 @@ def main():
                 selected_file = found_files[0]
                 report_type = get_report_type(selected_file)
                 st.success(f"✅ {report_type}")
-                st.write(f"📁 `{selected_file}`")
+                # Prikazi samo naziv datoteke bez putanje
+                st.write(f"📁 `{os.path.basename(selected_file)}`")
             else:
                 selected_file = st.selectbox(
                     "Odaberite izvještaj:",
                     found_files,
-                    format_func=lambda x: f"{get_report_type(x).split()[-1]} - {x.split('/')[-1]}"
+                    format_func=lambda x: f"{get_report_type(x).split()[-1]} - {os.path.basename(x)}"
                 )
         else:
             selected_file = None
-            st.error("❌ Nema dostupnih izvještaja")
+            st.error("❌ Nema dostupnih izvještaja u `reports/` folderu")
 
     if found_files and selected_file:
         report_type = get_report_type(selected_file)
@@ -123,7 +141,8 @@ def main():
 
         with open(selected_file, "rb") as file:
             file_extension = selected_file.split('.')[-1]
-            download_name = f"MuraDrava_{selected_file}"
+            # Koristiti samo naziv datoteke za download
+            download_name = f"MuraDrava_{os.path.basename(selected_file)}"
             st.download_button(
                 label="📥 Preuzmi izvještaj",
                 data=file,
@@ -132,14 +151,20 @@ def main():
             )
 
     elif not found_files:
-        st.error("❌ Nisu pronađene datoteke s nazivom 'redovni' ili 'posebni'")
+        st.error("❌ Nisu pronađene datoteke s nazivom 'redovni' ili 'posebni' u `reports/` folderu")
 
-        all_images = glob.glob("*.png") + glob.glob("*.jpg") + glob.glob("*.jpeg")
+        # Provjeri sve slike u reports folderu
+        reports_folder = "reports"
+        all_images = []
+        if os.path.exists(reports_folder):
+            all_images = (glob.glob(os.path.join(reports_folder, "*.png")) + 
+                         glob.glob(os.path.join(reports_folder, "*.jpg")) + 
+                         glob.glob(os.path.join(reports_folder, "*.jpeg")))
 
         if all_images:
-            st.subheader("📁 Sve slike u direktoriju:")
+            st.subheader("📁 Sve slike u reports/ direktoriju:")
             for img in all_images:
-                st.write(f"• {img}")
+                st.write(f"• {os.path.basename(img)}")
 
         st.subheader("📤 Uploadajte sliku:")
         uploaded_file = st.file_uploader(
@@ -167,3 +192,7 @@ st.sidebar.markdown("🌊 MuraDrava-FFS")
 
 if __name__ == "__main__":
     main()
+
+
+
+
