@@ -114,7 +114,6 @@ def main():
 
     with st.sidebar:
         st.markdown("### 📋 Odabir izvještaja")
-        st.markdown("📁 Folder: `reports/`")
 
         if found_files:
             if len(found_files) == 1:
@@ -193,5 +192,6 @@ st.sidebar.markdown("🌊 MuraDrava-FFS")
 
 if __name__ == "__main__":
     main()
+
 
 
