@@ -27,14 +27,14 @@ def find_report_image():
         os.makedirs(reports_folder)
     
     patterns = [
-        "redovni.png", "posebni.png",
-        "redovni.jpg", "posebni.jpg",
-        "redovni.jpeg", "posebni.jpeg"
+        "*redovni*.png", "*posebni*.png",
+        "*redovni*.jpg", "*posebni*.jpg",
+        "*redovni*.jpeg", "*posebni*.jpeg"
     ]
     
     found_files = []
     
-    # Traži datoteke u reports folderu
+    # Trazi datoteke u reports folderu
     for pattern in patterns:
         # Kombinuj putanju s pattern-om
         search_pattern = os.path.join(reports_folder, pattern)
@@ -52,11 +52,11 @@ def get_report_type(filename):
     if 'redovni' in filename_lower:
         return "📊 Redovni izvještaj"
     elif 'posebni' in filename_lower:
-        return "⚠ Posebni izvještaj"
+        return "⚠️ Posebni izvještaj"
     else:
         return "📋 Izvještaj"
 
-def display_image_with_openseadragon(image: Image.Image):
+def display_image_with_openseadragon(image):
     buffered = BytesIO()
     image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
@@ -114,15 +114,15 @@ def main():
 
     with st.sidebar:
         st.markdown("### 📋 Odabir izvještaja")
-        st.markdown(f"📁 Folder: reports/")
+        st.markdown("📁 Folder: `reports/`")
 
         if found_files:
             if len(found_files) == 1:
                 selected_file = found_files[0]
                 report_type = get_report_type(selected_file)
                 st.success(f"✅ {report_type}")
-                # Prikaži samo naziv datoteke bez putanje
-                st.write(f"📁 {os.path.basename(selected_file)}")
+                # Prikazi samo naziv datoteke bez putanje
+                st.write(f"📁 `{os.path.basename(selected_file)}`")
             else:
                 selected_file = st.selectbox(
                     "Odaberite izvještaj:",
@@ -131,7 +131,7 @@ def main():
                 )
         else:
             selected_file = None
-            st.error("❌ Nema dostupnih izvještaja u reports/ folderu")
+            st.error("❌ Nema dostupnih izvještaja u `reports/` folderu")
 
     if found_files and selected_file:
         report_type = get_report_type(selected_file)
@@ -152,7 +152,7 @@ def main():
             )
 
     elif not found_files:
-        st.error("❌ Nisu pronađene datoteke s nazivom 'redovni' ili 'posebni' u reports/ folderu")
+        st.error("❌ Nisu pronađene datoteke s nazivom 'redovni' ili 'posebni' u `reports/` folderu")
 
         # Provjeri sve slike u reports folderu
         reports_folder = "reports"
@@ -191,6 +191,7 @@ def main():
 st.sidebar.markdown("---")
 st.sidebar.markdown("🌊 MuraDrava-FFS")
 
-if _name_ == "_main_":
-    main()
+if __name__ == "__main__":
+    main()
+
 
