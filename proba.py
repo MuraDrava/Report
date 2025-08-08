@@ -77,7 +77,7 @@ def display_image_with_openseadragon(image):
         #openseadragon {{
           width: 100%;
           height: 400px;
-          background-color: #ddd;
+          background-color: #000;
         }}
       </style>
     </head>
@@ -192,6 +192,7 @@ st.sidebar.markdown("🌊 MuraDrava-FFS")
 
 if __name__ == "__main__":
     main()
+
 
 
 
