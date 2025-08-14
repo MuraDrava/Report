@@ -74,7 +74,7 @@ def save_specific_file(source_dir: Path, target_folder: Path, config: dict) -> P
     report_type = config['type']
     report_date = config['date'].replace('-', '')  # Ukloni crtice iz datuma
     
-    new_name = f"{report_type}_{report_date}_{timestamp}.jpeg"
+    new_name = f"{report_date}_{timestamp}_{report_type}.jpeg"
     target_path = target_folder / new_name
     
     # Kopiraj datoteku
@@ -204,4 +204,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
