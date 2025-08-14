@@ -104,41 +104,43 @@ def create_trigger_example():
 def git_commit_and_push(files: list[Path], config: dict):
     """
     Git commit i push s opisnim commit message-om
-    Provjeri konflikte prije commit-a
+    Prvo očisti git stanje, zatim kopiraj datoteke
     """
     try:
         commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
         
-        # 0. Resetiraj na čisto stanje
+        # 1. Resetiraj na čisto stanje PRIJE kopiranja
         print("[🔧] Resetiram git na čisto stanje...")
         subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=Path.cwd(), check=True)
         subprocess.run(["git", "clean", "-fd"], cwd=Path.cwd(), check=True)
         print("[✓] Git reset završen")
         
-        # 1. Pull najnovije promjene
+        # 2. Pull najnovije promjene
         print("[ℹ️] Dohvaćam najnovije promjene s GitHub-a...")
         subprocess.run(["git", "pull", "origin", "main"], cwd=Path.cwd(), check=True)
         print("[✓] Git pull uspješan")
         
-        # 2. Dodaj datoteke
+        # 3. Provjeri postoje li datoteke (nakon reset-a možda su obrisane)
+        for file in files:
+            if not file.exists():
+                print(f"[⚠️] Datoteka je obrisana resetom: {file}")
+                return False
+        
+        # 4. Dodaj datoteke
         for file in files:
             subprocess.run(["git", "add", str(file)], cwd=Path.cwd(), check=True)
         
-        # 3. Commit
+        # 5. Commit
         subprocess.run(["git", "commit", "-m", commit_message], cwd=Path.cwd(), check=True)
         
-        # 4. Push
+        # 6. Push
         subprocess.run(["git", "push", "origin", "main"], cwd=Path.cwd(), check=True)
         print(f"[✓] Git push uspješan: {commit_message}")
+        return True
         
     except subprocess.CalledProcessError as e:
         print(f"[✗] Git greška: {e}")
-        
-        # Predloži ručno rješavanje
-        print("\n[💡] Brzo rješavanje:")
-        print("git reset --hard HEAD")
-        print("git pull origin main")
-        print("git push origin main")
+        return False
 
 def main():
     print("=" * 50)
@@ -156,14 +158,34 @@ def main():
         print(f"[✗] Izvorna mapa ne postoji: {SOURCE_DIR}")
         return
     
-    # 4. Kopiraj specifičnu datoteku na temelju triggera
+    # 4. PRVO očisti git stanje
+    try:
+        print("[🔧] Pripremam git za upload...")
+        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=Path.cwd(), check=True)
+        subprocess.run(["git", "clean", "-fd"], cwd=Path.cwd(), check=True)
+        subprocess.run(["git", "pull", "origin", "main"], cwd=Path.cwd(), check=True)
+        print("[✓] Git priprema završena")
+    except subprocess.CalledProcessError as e:
+        print(f"[⚠️] Git priprema neuspješna: {e}")
+    
+    # 5. ZATIM kopiraj datoteku
     try:
         print(f"[ℹ️] Tražim {config['source_file']} u {SOURCE_DIR}")
         
         saved_file = save_specific_file(SOURCE_DIR, TARGET_DIR, config)
         
-        # 5. Git commit i push
-        git_commit_and_push([saved_file], config)
+        # 6. Git add, commit i push
+        try:
+            commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
+            
+            subprocess.run(["git", "add", str(saved_file)], cwd=Path.cwd(), check=True)
+            subprocess.run(["git", "commit", "-m", commit_message], cwd=Path.cwd(), check=True)
+            subprocess.run(["git", "push", "origin", "main"], cwd=Path.cwd(), check=True)
+            
+            print(f"[✓] Git push uspješan: {commit_message}")
+            
+        except subprocess.CalledProcessError as e:
+            print(f"[✗] Git greška: {e}")
         
         print(f"\n[✅] Uspješno uploadana datoteka!")
         print(f"[📊] Tip: {config['type']}")
