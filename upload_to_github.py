@@ -70,9 +70,9 @@ def save_specific_file(source_dir: Path, target_folder: Path, config: dict) -> P
         raise FileNotFoundError(f"Datoteka ne postoji: {source_file}")
     
     # Generiraj novi naziv
-    timestamp = datetime.now().strftime("%H%M")  
+    timestamp = datetime.now().strftime("%H")  
     report_type = config['type']
-    report_date = config['date'].replace('-', '')  # Ukloni crtice iz datuma
+    report_date = config['date']  # Ukloni crtice iz datuma
     
     new_name = f"{report_date}_{timestamp}_{report_type}.jpeg"
     target_path = target_folder / new_name
@@ -204,6 +204,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
