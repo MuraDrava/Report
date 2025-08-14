@@ -5,193 +5,213 @@ Created on Wed Jul 30 16:33:22 2025
 @author: pranjikl
 """
 
-import streamlit as st
-from PIL import Image
-import glob
-from io import BytesIO
-import base64
 import os
+from datetime import datetime
+from pathlib import Path
+from shutil import copy2
+import subprocess
+import glob
 
-st.set_page_config(
-    page_title="MuraDrava-FFS",
-    page_icon="🌊",
-    layout="wide"
-)
+# Postavke
+SOURCE_DIR = Path(r"C:\MuraDrava_PrognostickiModel\MuraDravaFFS\Reports\images")
+TARGET_DIR = Path("reports")  # Relativna putanja unutar tvog git repozitorija
+TRIGGER_FILE = Path(r"C:\MuraDrava_PrognostickiModel\MuraDravaFFS\Trigger.txt")  # Putanja do trigger datoteke
 
-def find_report_image():
-    # Definiraj putanju do reports foldera
-    reports_folder = "reports"
-    
-    # Provjeri postoji li reports folder, ako ne - stvori ga
-    if not os.path.exists(reports_folder):
-        os.makedirs(reports_folder)
-    
-    patterns = [
-        "*redovni*.png", "*posebni*.png",
-        "*redovni*.jpg", "*posebni*.jpg",
-        "*redovni*.jpeg", "*posebni*.jpeg"
-    ]
-    
-    found_files = []
-    
-    # Trazi datoteke u reports folderu
-    for pattern in patterns:
-        # Kombinuj putanju s pattern-om
-        search_pattern = os.path.join(reports_folder, pattern)
-        found_files.extend(glob.glob(search_pattern))
-    
-    found_files = list(set(found_files))
-    found_files.sort()
-    return found_files
-
-def get_report_type(filename):
-    # Uzmi samo naziv datoteke bez putanje
-    filename_base = os.path.basename(filename)
-    filename_lower = filename_base.lower()
-    
-    if 'redovni' in filename_lower:
-        return "📊 Redovni izvještaj"
-    elif 'posebni' in filename_lower:
-        return "⚠️ Posebni izvještaj"
-    else:
-        return "📋 Izvještaj"
-
-def display_image_with_openseadragon(image):
-    buffered = BytesIO()
-    image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-
-    html = f"""
-    <html>
-    <head>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/3.1.0/openseadragon.min.js"></script>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/3.1.0/openseadragon.min.css" />
-      <style>
-        #openseadragon-wrapper {{
-          width: 100%;
-          height: 400px;
-          overflow: auto;
-          border: 1px solid #ccc;
-          margin-bottom: 20px;
-        }}
-        #openseadragon {{
-          width: 100%;
-          height: 400px;
-          background-color: #000;
-        }}
-      </style>
-    </head>
-    <body>
-      <div id="openseadragon-wrapper">
-        <div id="openseadragon"></div>
-      </div>
-      <script>
-        var viewer = OpenSeadragon({{
-          id: "openseadragon",
-          prefixUrl: "https://cdnjs.cloudflare.com/ajax/libs/openseadragon/3.1.0/images/",
-          tileSources: {{
-            type: 'image',
-            url: "data:image/png;base64,{img_str}"
-          }},
-          gestureSettingsTouch: {{
-            pinchRotate: false,
-            pinchToZoom: true,
-            flickEnabled: true,
-            flickMinSpeed: 20,
-            flickMomentum: 0.25
-          }}
-        }});
-      </script>
-    </body>
-    </html>
+def read_trigger_config():
     """
-    st.components.v1.html(html, height=450)
+    Čita Trigger.txt datoteku koja sadrži "Daily" ili "Alert"
+    
+    Daily -> redovni.jpeg
+    Alert -> posebni.jpeg
+    """
+    config = {
+        'type': 'redovni',  # default
+        'source_file': 'redovni.jpeg',  # default
+        'date': datetime.now().strftime('%Y-%m-%d')  # default današnji datum
+    }
+    
+    if not TRIGGER_FILE.exists():
+        print(f"[⚠️] Trigger datoteka ne postoji: {TRIGGER_FILE}")
+        print(f"[ℹ️] Koristim default: {config}")
+        return config
+    
+    try:
+        with open(TRIGGER_FILE, 'r', encoding='utf-8') as file:
+            content = file.read().strip()
+            
+            # Ukloni navodnike ako postoje
+            content = content.strip('"\'')
+            
+            if content.upper() == 'DAILY':
+                config['type'] = 'redovni'
+                config['source_file'] = 'redovni.jpeg'
+                print(f"[✓] Trigger: DAILY → kopiram redovni.jpeg")
+                
+            elif content.upper() == 'ALERT':
+                config['type'] = 'posebni'
+                config['source_file'] = 'posebni.jpeg'
+                print(f"[✓] Trigger: ALERT → kopiram posebni.jpeg")
+                
+            else:
+                print(f"[⚠️] Nepoznat trigger: '{content}'. Očekuje se 'Daily' ili 'Alert'")
+                print(f"[ℹ️] Koristim default: redovni.jpeg")
+        
+        return config
+        
+    except Exception as e:
+        print(f"[✗] Greška pri čitanju trigger datoteke: {e}")
+        print(f"[ℹ️] Koristim default: {config}")
+        return config
+
+def save_specific_file(source_dir: Path, target_folder: Path, config: dict) -> Path:
+    """
+    Kopira specifičnu datoteku (redovni.jpeg ili posebni.jpeg) s novim nazivom
+    Format: {tip}_{datum}_{timestamp}.jpeg
+    """
+    os.makedirs(target_folder, exist_ok=True)
+    
+    # Pronađi specifičnu datoteku
+    source_file = source_dir / config['source_file']
+    
+    if not source_file.exists():
+        raise FileNotFoundError(f"Datoteka ne postoji: {source_file}")
+    
+    # Generiraj novi naziv
+    timestamp = datetime.now().strftime("%H%M%S")  
+    report_type = config['type']
+    report_date = config['date'].replace('-', '')  # Ukloni crtice iz datuma
+    
+    new_name = f"{report_type}_{report_date}_{timestamp}.jpeg"
+    target_path = target_folder / new_name
+    
+    # Kopiraj datoteku
+    copy2(source_file, target_path)
+    print(f"[✓] Spremljeno: {source_file.name} → {target_path.name}")
+    return target_path
+
+def create_trigger_example():
+    """
+    Stvori primjer Trigger.txt datoteke ako ne postoji
+    """
+    if not TRIGGER_FILE.exists():
+        try:
+            TRIGGER_FILE.parent.mkdir(parents=True, exist_ok=True)
+            
+            example_content = "Daily"
+            
+            with open(TRIGGER_FILE, 'w', encoding='utf-8') as file:
+                file.write(example_content)
+                
+            print(f"[✓] Stvoren primjer Trigger.txt: {TRIGGER_FILE}")
+            print(f"[ℹ️] Sadržaj: 'Daily' (promijeni na 'Alert' za posebni izvještaj)")
+            
+        except Exception as e:
+            print(f"[✗] Ne mogu stvoriti Trigger.txt: {e}")
+
+def git_commit_and_push(files: list[Path], config: dict):
+    """
+    Git commit i push s opisnim commit message-om
+    Prvo očisti git stanje, zatim kopiraj datoteke
+    """
+    try:
+        commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
+        
+        # 1. Resetiraj na čisto stanje PRIJE kopiranja
+        print("[🔧] Resetiram git na čisto stanje...")
+        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=Path.cwd(), check=True)
+        subprocess.run(["git", "clean", "-fd"], cwd=Path.cwd(), check=True)
+        print("[✓] Git reset završen")
+        
+        # 2. Pull najnovije promjene
+        print("[ℹ️] Dohvaćam najnovije promjene s GitHub-a...")
+        subprocess.run(["git", "pull", "origin", "main"], cwd=Path.cwd(), check=True)
+        print("[✓] Git pull uspješan")
+        
+        # 3. Provjeri postoje li datoteke (nakon reset-a možda su obrisane)
+        for file in files:
+            if not file.exists():
+                print(f"[⚠️] Datoteka je obrisana resetom: {file}")
+                return False
+        
+        # 4. Dodaj datoteke
+        for file in files:
+            subprocess.run(["git", "add", str(file)], cwd=Path.cwd(), check=True)
+        
+        # 5. Commit
+        subprocess.run(["git", "commit", "-m", commit_message], cwd=Path.cwd(), check=True)
+        
+        # 6. Push
+        subprocess.run(["git", "push", "origin", "main"], cwd=Path.cwd(), check=True)
+        print(f"[✓] Git push uspješan: {commit_message}")
+        return True
+        
+    except subprocess.CalledProcessError as e:
+        print(f"[✗] Git greška: {e}")
+        return False
 
 def main():
-    st.title("🌊 MuraDrava-FFS")
-
-    found_files = find_report_image()
-
-    with st.sidebar:
-        st.markdown("### 📋 Odabir izvještaja")
-
-        if found_files:
-            if len(found_files) == 1:
-                selected_file = found_files[0]
-                report_type = get_report_type(selected_file)
-                st.success(f"✅ {report_type}")
-                # Prikazi samo naziv datoteke bez putanje
-                st.write(f"📁 `{os.path.basename(selected_file)}`")
-            else:
-                selected_file = st.selectbox(
-                    "Odaberite izvještaj:",
-                    found_files,
-                    format_func=lambda x: f"{get_report_type(x).split()[-1]} - {os.path.basename(x)}"
-                )
-        else:
-            selected_file = None
-            st.error("❌ Nema dostupnih izvještaja u `reports/` folderu")
-
-    if found_files and selected_file:
-        report_type = get_report_type(selected_file)
-        st.subheader(report_type)
-
-        image = Image.open(selected_file)
-        display_image_with_openseadragon(image)
-
-        with open(selected_file, "rb") as file:
-            file_extension = selected_file.split('.')[-1]
-            # Koristiti samo naziv datoteke za download
-            download_name = f"MuraDrava_{os.path.basename(selected_file)}"
-            st.download_button(
-                label="📥 Preuzmi izvještaj",
-                data=file,
-                file_name=download_name,
-                mime=f"image/{file_extension}"
-            )
-
-    elif not found_files:
-        st.error("❌ Nisu pronađene datoteke s nazivom 'redovni' ili 'posebni' u `reports/` folderu")
-
-        # Provjeri sve slike u reports folderu
-        reports_folder = "reports"
-        all_images = []
-        if os.path.exists(reports_folder):
-            all_images = (glob.glob(os.path.join(reports_folder, "*.png")) + 
-                         glob.glob(os.path.join(reports_folder, "*.jpg")) + 
-                         glob.glob(os.path.join(reports_folder, "*.jpeg")))
-
-        if all_images:
-            st.subheader("📁 Sve slike u reports/ direktoriju:")
-            for img in all_images:
-                st.write(f"• {os.path.basename(img)}")
-
-        st.subheader("📤 Uploadajte sliku:")
-        uploaded_file = st.file_uploader(
-            "Odaberite PNG/JPG datoteku",
-            type=['png', 'jpg', 'jpeg']
-        )
-
-        if uploaded_file is not None:
-            report_type = get_report_type(uploaded_file.name)
-            st.subheader(report_type)
-
-            image = Image.open(uploaded_file)
-            display_image_with_openseadragon(image)
-
-            st.download_button(
-                label="📥 Preuzmi sliku",
-                data=uploaded_file.getvalue(),
-                file_name=f"MuraDrava_{uploaded_file.name}",
-                mime=f"image/{uploaded_file.name.split('.')[-1]}"
-            )
-
-# Sidebar - kontakt
-st.sidebar.markdown("---")
-st.sidebar.markdown("🌊 MuraDrava-FFS")
+    print("=" * 50)
+    print("🌊 MuraDrava-FFS Automatski Upload")
+    print("=" * 50)
+    
+    # 1. Stvori trigger datoteku ako ne postoji
+    create_trigger_example()
+    
+    # 2. Učitaj trigger konfiguraciju
+    config = read_trigger_config()
+    
+    # 3. Provjeri postoji li source direktorij
+    if not SOURCE_DIR.exists():
+        print(f"[✗] Izvorna mapa ne postoji: {SOURCE_DIR}")
+        return
+    
+    # 4. PRVO očisti git stanje
+    try:
+        print("[🔧] Pripremam git za upload...")
+        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=Path.cwd(), check=True)
+        subprocess.run(["git", "clean", "-fd"], cwd=Path.cwd(), check=True)
+        subprocess.run(["git", "pull", "origin", "main"], cwd=Path.cwd(), check=True)
+        print("[✓] Git priprema završena")
+    except subprocess.CalledProcessError as e:
+        print(f"[⚠️] Git priprema neuspješna: {e}")
+    
+    # 5. ZATIM kopiraj datoteku
+    try:
+        print(f"[ℹ️] Tražim {config['source_file']} u {SOURCE_DIR}")
+        
+        saved_file = save_specific_file(SOURCE_DIR, TARGET_DIR, config)
+        
+        # 6. Git add, commit i push
+        try:
+            commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
+            
+            subprocess.run(["git", "add", str(saved_file)], cwd=Path.cwd(), check=True)
+            subprocess.run(["git", "commit", "-m", commit_message], cwd=Path.cwd(), check=True)
+            subprocess.run(["git", "push", "origin", "main"], cwd=Path.cwd(), check=True)
+            
+            print(f"[✓] Git push uspješan: {commit_message}")
+            
+        except subprocess.CalledProcessError as e:
+            print(f"[✗] Git greška: {e}")
+        
+        print(f"\n[✅] Uspješno uploadana datoteka!")
+        print(f"[📊] Tip: {config['type']}")
+        print(f"[📅] Datum: {config['date']}")
+        print(f"[📁] Izvorni file: {config['source_file']}")
+        print(f"[📁] Novi file: {saved_file.name}")
+        
+    except FileNotFoundError as e:
+        print(f"[✗] {e}")
+        print(f"[ℹ️] Provjeri postoji li {config['source_file']} u {SOURCE_DIR}")
+    
+    except Exception as e:
+        print(f"[✗] Greška pri kopiranju: {e}")
+    
+    print("=" * 50)
 
 if __name__ == "__main__":
     main()
+
 
 
 
