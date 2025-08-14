@@ -41,7 +41,7 @@ def find_report_image():
         found_files.extend(glob.glob(search_pattern))
     
     found_files = list(set(found_files))
-    found_files.sort()
+    found_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
     return found_files
 
 def get_report_type(filename):
@@ -192,6 +192,7 @@ st.sidebar.markdown("🌊 MuraDrava-FFS")
 
 if __name__ == "__main__":
     main()
+
 
 
 
