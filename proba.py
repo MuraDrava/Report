@@ -116,7 +116,7 @@ def main():
         st.markdown("### 📋 Odabir izvještaja")
 
         if found_files:
-            if len(found_files) == 1:
+            if len(found_files) == 0:
                 selected_file = found_files[0]
                 report_type = get_report_type(selected_file)
                 st.success(f"✅ {report_type}")
@@ -126,7 +126,7 @@ def main():
                 selected_file = st.selectbox(
                     "Odaberite izvještaj:",
                     found_files,
-                    format_func=lambda x: f"{get_report_type(x).split()[-1]} - {os.path.basename(x)}"
+                    format_func=lambda x: f"{os.path.basename(x)}"
                 )
         else:
             selected_file = None
@@ -192,6 +192,7 @@ st.sidebar.markdown("🌊 MuraDrava-FFS")
 
 if __name__ == "__main__":
     main()
+
 
 
 
