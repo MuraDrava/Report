@@ -253,10 +253,5 @@ def main():
     
     print("=" * 50)
 
-if __name__ == "__main__":
+if _ _name_ _ == "_ _main_ _":
     main()
-
-
-
-
-
