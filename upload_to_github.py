@@ -5,11 +5,11 @@ from pathlib import Path
 from shutil import copy2
 import subprocess
 
+
 # Postavke
 SOURCE_DIR = Path(r"C:\MuraDrava_PrognostickiModel\MuraDravaFFS\Reports\images")
 TARGET_DIR = Path("reports")  # Relativna putanja unutar git repozitorija
 TRIGGER_FILE = Path(r"C:\MuraDrava_PrognostickiModel\MuraDravaFFS\Trigger.txt")  # Putanja do trigger datoteke
-BRANCH = "main"  # promijeni u "master" ako repo koristi master granu
 
 
 def cleanup_git_locks():
@@ -111,6 +111,24 @@ def safe_git_command(cmd, max_retries=3):
                 raise
 
 
+def detect_git_branch():
+    """Automatski otkriva default granu (main/master)"""
+    try:
+        result = subprocess.run(["git", "branch", "-r"],
+                                capture_output=True, text=True, check=True)
+        branches = result.stdout.lower()
+        if "origin/main" in branches:
+            return "main"
+        elif "origin/master" in branches:
+            return "master"
+        else:
+            print("[⚠] Nije pronađen ni main ni master – koristim main")
+            return "main"
+    except Exception:
+        print("[⚠] Ne mogu detektirati granu – koristim main")
+        return "main"
+
+
 def main():
     print("=" * 50)
     print("🌊 MuraDrava-FFS Automatski Upload")
@@ -137,9 +155,10 @@ def main():
         return
 
     # Git dio
+    branch = detect_git_branch()
     try:
-        print("[🔧] Git operacije...")
-        safe_git_command(["git", "pull", "origin", BRANCH])
+        print(f"[🔧] Git operacije... (branch: {branch})")
+        safe_git_command(["git", "pull", "origin", branch])
         git_path = f"{TARGET_DIR}/{saved_file.name}"
         safe_git_command(["git", "add", git_path])
         commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
@@ -150,7 +169,7 @@ def main():
             safe_git_command(["git", "commit", "-m", commit_message])
         else:
             print("[ℹ] Nema novih promjena za commit")
-        safe_git_command(["git", "push", "origin", BRANCH])
+        safe_git_command(["git", "push", "origin", branch])
         print(f"[✅] Git push uspješan")
     except Exception as e:
         print(f"[✗] Git greška: {e}")
@@ -162,6 +181,7 @@ def main():
     print(f"[📁] Izvorni file: {config['source_file']}")
     print(f"[📁] Novi file: {saved_file.name}")
     print("=" * 50)
+
 
 if __name__ == "__main__":
     main()
