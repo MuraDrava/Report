@@ -223,8 +223,8 @@ def main():
         print("[🔧] Pripremam git za upload...")
         
         # Jednostavniji pristup - bez reset/clean
-        safe_git_command(["git", "pull", "origin", "main"])
-        print("[✓] Git pull uspješan")
+       # safe_git_command(["git", "pull", "origin", "main"])
+       # print("[✓] Git pull uspješan")
         
         # Git add s relativnom putanjom
         git_path = f"reports/{saved_file.name}"
@@ -255,3 +255,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
