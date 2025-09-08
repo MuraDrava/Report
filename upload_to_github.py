@@ -234,7 +234,7 @@ def main():
         # Commit i push
         commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
         safe_git_command(["git", "commit", "-m", commit_message])
-        safe_git_command(["git", "push", "origin", "main"])
+       # safe_git_command(["git", "push", "origin", "main"])
         
         print(f"[✅] Git push uspješan: {commit_message}")
         
@@ -255,4 +255,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
