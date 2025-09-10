@@ -1,3 +1,4 @@
+
 import os
 import time
 from datetime import datetime
@@ -33,6 +34,31 @@ def kill_git_processes():
                 subprocess.run(['taskkill', '/F', '/IM', 'git.exe'], capture_output=True)
                 time.sleep(1)
         except Exception: pass
+
+
+def check_git_config():
+    """Provjeri Git konfiguraciju"""
+    try:
+        # Provjeri remote URL
+        result = subprocess.run(["git", "remote", "-v"], 
+                              capture_output=True, text=True, check=True)
+        print(f"[ℹ] Git remotes:\n{result.stdout}")
+        
+        # Provjeri user config
+        user = subprocess.run(["git", "config", "user.name"], 
+                            capture_output=True, text=True)
+        email = subprocess.run(["git", "config", "user.email"], 
+                             capture_output=True, text=True)
+        
+        if user.returncode == 0 and email.returncode == 0:
+            print(f"[ℹ] Git user: {user.stdout.strip()} <{email.stdout.strip()}>")
+        else:
+            print("[⚠] Git user/email nije konfiguriran!")
+            
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[✗] Git config greška: {e}")
+        return False
 
 
 def read_trigger_config():
@@ -71,17 +97,24 @@ def save_specific_file(source_dir: Path, target_folder: Path, config: dict) -> P
 def safe_git_command(cmd, max_retries=3):
     for attempt in range(max_retries):
         try:
-            return subprocess.run(cmd, cwd=Path.cwd(), check=True,
+            result = subprocess.run(cmd, cwd=Path.cwd(), check=True,
                                   capture_output=True, text=True, timeout=30)
+            return result
         except subprocess.CalledProcessError as e:
-            err = e.stderr or str(e)
-            if ("index.lock" in err or "Another git process" in err) and attempt < max_retries - 1:
+            err_msg = e.stderr or str(e)
+            print(f"[⚠] Git komanda neuspješna (pokušaj {attempt + 1}/{max_retries})")
+            print(f"[⚠] Komanda: {' '.join(cmd)}")
+            print(f"[⚠] Error: {err_msg}")
+            
+            if ("index.lock" in err_msg or "Another git process" in err_msg) and attempt < max_retries - 1:
+                print("[🔧] Čistim git lockove...")
                 kill_git_processes()
                 cleanup_git_locks()
                 time.sleep(2)
             else:
                 raise
         except subprocess.TimeoutExpired:
+            print(f"[⚠] Git komanda timeout (pokušaj {attempt + 1}/{max_retries})")
             if attempt == max_retries - 1:
                 raise
 
@@ -114,6 +147,58 @@ def ensure_upstream(branch):
         print(f"[⚠] Ne mogu postaviti upstream: {e}")
 
 
+def git_operations_with_fallback(config, saved_file, branch):
+    """Git operacije s fallback opcijama"""
+    git_path = f"{TARGET_DIR}/{saved_file.name}"
+    
+    try:
+        # Pokušaj normalni pull
+        print(f"[🔧] Pokušavam git pull...")
+        safe_git_command(["git", "pull", "origin", branch])
+        print("[✓] Git pull uspješan")
+        
+    except Exception as e:
+        print(f"[⚠] Git pull neuspješan: {e}")
+        print("[🔧] Pokušavam bez pull-a...")
+        
+        # Provjeri status repo-a
+        try:
+            status = subprocess.run(["git", "status", "--porcelain"], 
+                                  capture_output=True, text=True, check=True)
+            if status.stdout.strip():
+                print("[ℹ] Ima lokalne promjene, nastavljam bez pull-a")
+            else:
+                print("[ℹ] Nema lokalne promjene")
+        except Exception:
+            print("[⚠] Ne mogu provjeriti git status")
+    
+    # Nastavi s add, commit, push
+    try:
+        print(f"[🔧] Dodajem datoteku: {git_path}")
+        safe_git_command(["git", "add", git_path])
+        
+        commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
+        
+        # Provjeri ima li što za commit
+        status = subprocess.run(["git", "status", "--porcelain"], 
+                              capture_output=True, text=True, check=True)
+        
+        if status.stdout.strip():
+            print(f"[🔧] Commit: {commit_message}")
+            safe_git_command(["git", "commit", "-m", commit_message])
+            print("[✓] Git commit uspješan")
+            
+            print(f"[🔧] Push na origin/{branch}...")
+            safe_git_command(["git", "push", "origin", branch])
+            print("[✅] Git push uspješan!")
+        else:
+            print("[ℹ] Nema novih promjena za commit")
+            
+    except Exception as e:
+        print(f"[✗] Git operacija neuspješna: {e}")
+        raise
+
+
 def main():
     print("="*50)
     print("🌊 MuraDrava-FFS Automatski Upload")
@@ -121,6 +206,11 @@ def main():
 
     kill_git_processes()
     cleanup_git_locks()
+
+    # Provjeri Git konfiguraciju
+    if not check_git_config():
+        print("[✗] Git nije pravilno konfiguriran!")
+        return
 
     config = read_trigger_config()
 
@@ -132,27 +222,16 @@ def main():
         print(f"[ℹ] Tražim {config['source_file']} u {SOURCE_DIR}")
         saved_file = save_specific_file(SOURCE_DIR, TARGET_DIR, config)
     except Exception as e:
-        print(f"[✗] Greška: {e}")
+        print(f"[✗] Greška pri spremanju datoteke: {e}")
         return
 
     branch = detect_git_branch()
     ensure_upstream(branch)
 
     try:
-        print(f"[🔧] Git operacije... (branch: {branch})")
-        safe_git_command(["git", "pull", "origin", branch])
-        git_path = f"{TARGET_DIR}/{saved_file.name}"
-        safe_git_command(["git", "add", git_path])
-        commit_message = f"Dodani {config['type']} izvještaji za {config['date']}"
-        status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
-        if status.stdout.strip():
-            safe_git_command(["git", "commit", "-m", commit_message])
-        else:
-            print("[ℹ] Nema novih promjena za commit")
-        safe_git_command(["git", "push", "origin", branch])
-        print(f"[✅] Git push uspješan")
+        git_operations_with_fallback(config, saved_file, branch)
     except Exception as e:
-        print(f"[✗] Git greška: {e}")
+        print(f"[✗] Finalna Git greška: {e}")
 
     print("\n[📋] REZULTAT:")
     print(f"[📊] Tip: {config['type']}")
