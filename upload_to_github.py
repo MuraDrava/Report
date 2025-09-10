@@ -89,7 +89,7 @@ def save_specific_file(source_dir: Path, target_folder: Path, config: dict) -> P
     if not source_file.exists():
         raise FileNotFoundError(f"Datoteka ne postoji: {source_file}")
     timestamp = datetime.now().strftime("%H")
-    new_name = f"{config['date']}{timestamp}{config['type']}.jpeg"
+    new_name = f"{config['date']}_{timestamp}_{config['type']}.jpeg"
     target_path = target_folder / new_name
     copy2(source_file, target_path)
     print(f"[✓] Spremljeno: {source_file.name} → {target_path.name}")
@@ -282,3 +282,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
