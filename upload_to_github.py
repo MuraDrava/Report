@@ -1,4 +1,3 @@
-
 import os
 import time
 from datetime import datetime
@@ -207,8 +206,8 @@ def main():
     kill_git_processes()
     cleanup_git_locks()
 
-    # Provjeri Git konfiguraciju
-    if not check_git_config():
+    # Postavi Git konfiguraciju
+    if not setup_git_config():
         print("[✗] Git nije pravilno konfiguriran!")
         return
 
@@ -244,3 +243,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
